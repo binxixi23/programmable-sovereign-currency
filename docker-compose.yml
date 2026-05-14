@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  # ==========================================
+  # KAFKA ECOSYSTEM: Xử lý hàng đợi dữ liệu tốc độ cao
+  # ==========================================
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: psc-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: psc-kafka-broker
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+
+  # ==========================================
+  # SCYLLADB SHARD: Cơ sở dữ liệu phân tán lưu lịch sử tiền mặt
+  # ==========================================
+  scylladb:
+    image: scylladb/scylla:5.2.0
+    container_name: psc-scylladb-node
+    command: --smp 2 --memory 2G --overprovisioned 1 --api-address 0.0.0.0
+    ports:
+      - "9042:9042" # Cổng kết nối dữ liệu (CQL)
+      - "10000:10000" # Cổng quản trị API
+    volumes:
+      - scylla-data:/var/lib/scylla
+
+volumes:
+  scylla-data:
+    driver: local
